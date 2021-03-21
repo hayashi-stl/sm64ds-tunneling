@@ -1,33 +1,67 @@
 mod fix;
 mod yoshi;
+use std::collections::HashMap;
+
 use fix::Fix;
 use yoshi::Yoshi;
 
-fn main() {
-    for i in 1..100 {
-        for j in i..100 {
-            let mut yoshi = Yoshi::new(true);
-            let mut frame = 0;
-            while yoshi.position_y() >= fx!(0.0) {
-                yoshi.update(frame < i || frame >= j);
-                let val = yoshi.position_y().val();
-                frame += 1;
+fn yoshi_bfs(double_jump: bool) -> Vec<bool> {
+    let mut to_search = vec![Yoshi::new(double_jump)];
+    // Each Yoshi stores the Yoshi it came from and whether B was held.
+    let mut visited = vec![(Yoshi::new(double_jump), None)].into_iter().collect::<HashMap<_, _>>();
 
-                if val.div_euclid(64).rem_euclid(64) == 0 && [0x3c, 0x7e, 0xc4, 0x10e, 0x15c].contains(&val.div_euclid(4096)) {
-                    println!("Let go @ {0:3}, re-press @ {1:3}, ground pound @ {2:3}. Position Y: {3:8x} aka {3}", i, j, frame, yoshi.position_y());
-                }
+    let mut end_yoshi = None;
+    while let Some(yoshi) = to_search.pop() {
+        if yoshi.position_y().val().div_euclid(64) == -50 * 64 {
+            println!("Yoshi position: {0} aka {0:8x}", yoshi.position_y());
+            end_yoshi = Some(yoshi);
+            break;
+        }
+
+        // For negative y, insert and stop.
+        // Yoshi must reach -50 in one drop.
+        if yoshi.position_y() >= fx!(0.0) {
+            let mut yoshi_b = yoshi.clone();
+            yoshi_b.update(true);
+            let mut yoshi_n = yoshi.clone();
+            yoshi_n.update(false);
+                
+            for (new_yoshi, held_b) in vec![(yoshi_b, true), (yoshi_n, false)] {
+                visited.entry(new_yoshi.clone()).or_insert_with(|| {
+                    to_search.push(new_yoshi);
+                    Some((yoshi.clone(), held_b))
+                });
             }
         }
     }
-    //println!();
 
-    //let mut yoshi = Yoshi::new(true);
-    //let mut frame = 0;
-    //while yoshi.position_y() >= fx!(0.0) {
-    //    yoshi.update(frame < 3 || frame >= 8);
-    //    let val = yoshi.position_y().val();
-    //    frame += 1;
+    if let Some(mut yoshi) = end_yoshi {
+        let mut inputs = vec![];
+        while let Some((old_yoshi, held_b)) = &visited[&yoshi] {
+            yoshi = old_yoshi.clone();
+            inputs.push(*held_b);
+        }
 
-    //    println!("Beginning of frame {0:3}. Position Y: {1:8x} aka {1}", frame, yoshi.position_y());
-    //}
+        inputs.reverse();
+        inputs
+    } else {
+        panic!("Ahh! No setup!")
+    }
+}
+
+fn main() {
+    let inputs = yoshi_bfs(false);
+    //println!("Inputs: {:?}", inputs.into_iter().map(|b| if b {1} else {0}).collect::<Vec<_>>());
+    let mut prev = true;
+    let mut count = 0;
+    for input in inputs {
+        if prev == input {
+            count += 1;
+        } else {
+            println!("{} for {} frames", if prev {"Hold"} else {"Let go"}, count);
+            count = 1;
+            prev = input;
+        }
+    }
+    println!("{} for {} frames", if prev {"Hold"} else {"Let go"}, count);
 }
