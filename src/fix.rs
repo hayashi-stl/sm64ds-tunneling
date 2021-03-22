@@ -2,12 +2,12 @@ use std::{fmt::{Display, LowerHex}, num::Wrapping, ops::{Add, AddAssign, Div, Mu
 
 #[macro_export]
 macro_rules! fx {
-    ($x:expr) => {crate::fix::Fix::new($x)};
+    ($x:expr) => {$crate::fix::Fix::new($x)};
 }
 
 #[macro_export]
 macro_rules! fr {
-    ($x:expr) => {crate::fix::Fix::new_raw($x)};
+    ($x:expr) => {$crate::fix::Fix::new_raw($x)};
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]

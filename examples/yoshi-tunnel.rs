@@ -1,14 +1,13 @@
-mod fix;
-mod yoshi;
 use std::collections::HashMap;
 
-use fix::Fix;
-use yoshi::Yoshi;
+use sm64ds_tunneling::{fx, fr};
+use sm64ds_tunneling::fix::Fix;
+use sm64ds_tunneling::yoshi::Yoshi;
 
-fn yoshi_bfs(horz_speed: Fix, double_jump: bool) -> Vec<(Vec<bool>, i32)> {
-    let mut to_search = vec![Yoshi::new(horz_speed, double_jump)];
+fn yoshi_bfs(position_y: Fix, horz_speed: Fix, double_jump: bool) -> Vec<(Vec<bool>, i32)> {
+    let mut to_search = vec![Yoshi::new(position_y, horz_speed, double_jump)];
     // Each Yoshi stores the Yoshi it came from and whether B was held.
-    let mut visited = vec![(Yoshi::new(horz_speed, double_jump), None)].into_iter().collect::<HashMap<_, _>>();
+    let mut visited = vec![(Yoshi::new(position_y, horz_speed, double_jump), None)].into_iter().collect::<HashMap<_, _>>();
 
     let mut end_yoshis = vec![];
     while let Some(yoshi) = to_search.pop() {
@@ -47,19 +46,38 @@ fn yoshi_bfs(horz_speed: Fix, double_jump: bool) -> Vec<(Vec<bool>, i32)> {
     }).collect()
 }
 
-fn main() {
-    let args = std::env::args().collect::<Vec<_>>();
-    let speed_str = &args[1];
-    let speed = if speed_str.ends_with("fxu") {
-        fx!(speed_str[..speed_str.len() - 3].parse().expect("Expected valid number before fxu"))
-    } else if speed_str.starts_with("0x") {
-        fr!(i64::from_str_radix(&speed_str[2..], 16).expect("Expected valid hexadecimal integer") as i32)
+fn parse_fix(string: &str) -> Option<Fix> {
+    Some(if string.ends_with("fxu") {
+        fx!(string[..string.len() - 3].parse().ok()?)
+    } else if string.starts_with("0x") {
+        fr!(i64::from_str_radix(&string[2..], 16).ok()? as i32)
     } else {
-        fr!(speed_str.parse().expect("Expected valid integer"))
-    };
-    let double_jump = args[2] == "2";
+        fr!(string.parse().ok()?)
+    })
+}
 
-    let setups = yoshi_bfs(speed, double_jump);
+fn main() {
+    let (pos, speed, double_jump) = (|| {
+        let args = std::env::args().collect::<Vec<_>>();
+        let pos = parse_fix(&args.get(1)?).filter(|x| *x >= fx!(0.0))?;
+        let speed = parse_fix(&args.get(2)?)?;
+        if !["1", "2"].contains(&args.get(3)?) {
+            return None;
+        }
+        let double_jump = args[3] == "2";
+        Some((pos, speed, double_jump))
+    })().unwrap_or_else(|| {
+        println!(concat!(
+            "yoshi-tunnel <pos_y> <hspeed> <jump_number>\n",
+            "\n",
+            "pos_y:       Nonnegative starting offset y from the clipping floor\n",
+            "hspeed:      Initial horizontal speed\n",
+            "jump_number: 1 if single jump, 2 if double jump\n",
+        ));
+        panic!("Invalid input");
+    });
+
+    let setups = yoshi_bfs(pos, speed, double_jump);
 
     if setups.is_empty() {
         println!("No setups found.");

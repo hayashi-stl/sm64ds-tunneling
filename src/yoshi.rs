@@ -31,9 +31,9 @@ impl Yoshi {
     pub const FLUTTER_JUMP_DOWN_VERT_ACCELERATION: f64 = 0.75;
     pub const FLUTTER_JUMP_MAX_VERT_SPEED: f64 = 17.0;
     
-    pub fn new(horz_speed: Fix, double_jump: bool) -> Self {
+    pub fn new(position_y: Fix, horz_speed: Fix, double_jump: bool) -> Self {
         Self {
-            position_y: fx!(0.0),
+            position_y,
             velocity_y: (fx!(if double_jump {52.0} else {42.0}) + (horz_speed >> 2)) * fx!(Self::JUMP_FACTOR),
             vert_accel: fx!(Self::VERT_ACCEL),
             terminal_velocity: fx!(Self::TERMINAL_VELOCITY),
