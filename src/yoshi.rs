@@ -14,7 +14,6 @@ pub struct Yoshi {
     velocity_y: Fix,
     vert_accel: Fix,
     terminal_velocity: Fix,
-    double_jump: bool,
     can_flutter_jump: bool,
     state: State,
 }
@@ -32,13 +31,12 @@ impl Yoshi {
     pub const FLUTTER_JUMP_DOWN_VERT_ACCELERATION: f64 = 0.75;
     pub const FLUTTER_JUMP_MAX_VERT_SPEED: f64 = 17.0;
     
-    pub fn new(double_jump: bool) -> Self {
+    pub fn new(horz_speed: Fix, double_jump: bool) -> Self {
         Self {
             position_y: fx!(0.0),
-            velocity_y: fx!(0.0),
+            velocity_y: (fx!(if double_jump {52.0} else {42.0}) + (horz_speed >> 2)) * fx!(Self::JUMP_FACTOR),
             vert_accel: fx!(Self::VERT_ACCEL),
             terminal_velocity: fx!(Self::TERMINAL_VELOCITY),
-            double_jump,
             can_flutter_jump: true,
             state: State::Wait,
         }
@@ -56,7 +54,8 @@ impl Yoshi {
         match self.state {
             State::Wait => {
                 // Assume b is pressed here
-                self.velocity_y = fx!(if self.double_jump {52.0} else {42.0}) * fx!(Self::JUMP_FACTOR);
+                // Velocity set during initialization
+                // self.velocity_y = fx!(if self.double_jump {52.0} else {42.0}) * fx!(Self::JUMP_FACTOR);
                 self.state = State::Jump;
             }
 

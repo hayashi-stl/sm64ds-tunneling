@@ -5,17 +5,17 @@ use std::collections::HashMap;
 use fix::Fix;
 use yoshi::Yoshi;
 
-fn yoshi_bfs(double_jump: bool) -> Vec<bool> {
-    let mut to_search = vec![Yoshi::new(double_jump)];
+fn yoshi_bfs(horz_speed: Fix, double_jump: bool) -> Vec<(Vec<bool>, i32)> {
+    let mut to_search = vec![Yoshi::new(horz_speed, double_jump)];
     // Each Yoshi stores the Yoshi it came from and whether B was held.
-    let mut visited = vec![(Yoshi::new(double_jump), None)].into_iter().collect::<HashMap<_, _>>();
+    let mut visited = vec![(Yoshi::new(horz_speed, double_jump), None)].into_iter().collect::<HashMap<_, _>>();
 
-    let mut end_yoshi = None;
+    let mut end_yoshis = vec![];
     while let Some(yoshi) = to_search.pop() {
-        if yoshi.position_y().val().div_euclid(64) == -50 * 64 {
-            println!("Yoshi position: {0} aka {0:8x}", yoshi.position_y());
-            end_yoshi = Some(yoshi);
-            break;
+        let offset = (yoshi.position_y() - fx!(-50.0)).val();
+        if offset >= -62 && offset <= 64 {
+            end_yoshis.push((yoshi, offset));
+            continue; // position is definitely negative
         }
 
         // For negative y, insert and stop.
@@ -35,7 +35,7 @@ fn yoshi_bfs(double_jump: bool) -> Vec<bool> {
         }
     }
 
-    if let Some(mut yoshi) = end_yoshi {
+    end_yoshis.into_iter().map(|(mut yoshi, offset)| {
         let mut inputs = vec![];
         while let Some((old_yoshi, held_b)) = &visited[&yoshi] {
             yoshi = old_yoshi.clone();
@@ -43,25 +43,40 @@ fn yoshi_bfs(double_jump: bool) -> Vec<bool> {
         }
 
         inputs.reverse();
-        inputs
-    } else {
-        panic!("Ahh! No setup!")
-    }
+        (inputs, offset)
+    }).collect()
 }
 
 fn main() {
-    let inputs = yoshi_bfs(false);
-    //println!("Inputs: {:?}", inputs.into_iter().map(|b| if b {1} else {0}).collect::<Vec<_>>());
-    let mut prev = true;
-    let mut count = 0;
-    for input in inputs {
-        if prev == input {
-            count += 1;
-        } else {
-            println!("{} for {} frames", if prev {"Hold"} else {"Let go"}, count);
-            count = 1;
-            prev = input;
-        }
+    let args = std::env::args().collect::<Vec<_>>();
+    let speed_str = &args[1];
+    let speed = if speed_str.ends_with("fxu") {
+        fx!(speed_str[..speed_str.len() - 3].parse().expect("Expected valid number before fxu"))
+    } else if speed_str.starts_with("0x") {
+        fr!(i64::from_str_radix(&speed_str[2..], 16).expect("Expected valid hexadecimal integer") as i32)
+    } else {
+        fr!(speed_str.parse().expect("Expected valid integer"))
+    };
+    let double_jump = args[2] == "2";
+
+    let setups = yoshi_bfs(speed, double_jump);
+
+    if setups.is_empty() {
+        println!("No setups found.");
     }
-    println!("{} for {} frames", if prev {"Hold"} else {"Let go"}, count);
+
+    for (inputs, offset) in setups {
+        let mut prev = true;
+        let mut count = 0;
+        for input in inputs {
+            if prev == input {
+                count += 1;
+            } else {
+                print!("{}{}, ", if prev {"v"} else {"^"}, count);
+                count = 1;
+                prev = input;
+            }
+        }
+        println!("{} ({} ≤ offset < {})", if prev {"v"} else {"^"}, -offset, 64 - offset);
+    }
 }

@@ -1,8 +1,13 @@
-use std::{fmt::{Display, LowerHex}, num::Wrapping, ops::{Add, AddAssign, Div, Mul, MulAssign, Sub, SubAssign}};
+use std::{fmt::{Display, LowerHex}, num::Wrapping, ops::{Add, AddAssign, Div, Mul, MulAssign, Shl, Shr, Sub, SubAssign}};
 
 #[macro_export]
 macro_rules! fx {
     ($x:expr) => {crate::fix::Fix::new($x)};
+}
+
+#[macro_export]
+macro_rules! fr {
+    ($x:expr) => {crate::fix::Fix::new_raw($x)};
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -13,6 +18,10 @@ impl Fix {
 
     pub fn new(val: f64) -> Self {
         Self(Wrapping((val * (1 << Self::PRECISION) as f64 + 0.5).floor() as i32))
+    }
+
+    pub const fn new_raw(val: i32) -> Self {
+        Self(Wrapping(val))
     }
 
     pub fn min(self, rhs: Self) -> Self {
@@ -93,6 +102,22 @@ impl Div<i32> for Fix {
 
     fn div(self, rhs: i32) -> Self::Output {
         Fix(self.0 / Wrapping(rhs))
+    }
+}
+
+impl Shl<usize> for Fix {
+    type Output = Fix;
+
+    fn shl(self, rhs: usize) -> Self::Output {
+        Fix(self.0 << rhs)
+    }
+}
+
+impl Shr<usize> for Fix {
+    type Output = Fix;
+
+    fn shr(self, rhs: usize) -> Self::Output {
+        Fix(self.0 >> rhs)
     }
 }
 
