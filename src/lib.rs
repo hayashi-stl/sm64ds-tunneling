@@ -1,2 +1,2 @@
 pub mod fix;
-pub mod yoshi;
+pub mod player;
