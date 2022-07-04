@@ -101,6 +101,7 @@ fn main() {
             "floor-tunnel luigi 50.0fxu 20.0fxu 2\n",
             "finds all floor tunneling setups where Luigi starts 50 fxu above the floor he tunnels through,\n",
             "running at 20 fxu/frame, and tunnels with a double jump.\n",
+            "The setups start with the second jump, not the first one!\n",
             "\n",
             "Example output:\n",
             "v1, ^2, v3, ^ (-4 ≤ offset < 5)\n",
